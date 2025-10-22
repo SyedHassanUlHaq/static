@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Synthetic Video Detection</title>
+  <style>
+    :root {
+      --bg-color: #0f1115;
+      --card-bg: #1a1d23;
+      --text-color: #e5e7eb;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --error: #ef4444;
+      --border: #2e323b;
+      --success: #10b981;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2rem;
+      max-width: 520px;
+      width: 90%;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      margin-bottom: 1rem;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    input[type="file"] {
+      display: block;
+      width: 100%;
+      padding: 0.75rem;
+      background: #111317;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: #9ca3af;
+      cursor: pointer;
+      margin-bottom: 1rem;
+    }
+
+    input[type="file"]::-webkit-file-upload-button {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    input[type="file"]::-webkit-file-upload-button:hover {
+      background: var(--accent-hover);
+    }
+
+    button {
+      background-color: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.3s ease;
+      width: 100%;
+    }
+
+    button:hover:not(:disabled) {
+      background-color: var(--accent-hover);
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    #upload-status {
+      margin-top: 1rem;
+      font-size: 0.95rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      min-height: 28px;
+      transition: all 0.3s ease;
+      opacity: 0;
+    }
+
+    #upload-status.active {
+      opacity: 1;
+    }
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid #2e323b;
+      border-top: 2px solid var(--accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background-color: #22262c;
+      border-radius: 5px;
+      margin-top: 1rem;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background-color: var(--accent);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    h2 {
+      font-size: 1.2rem;
+      margin-top: 2rem;
+      color: #9ca3af;
+      font-weight: 500;
+    }
+
+    #response-container {
+      margin-top: 1rem;
+      padding: 1rem;
+      border-radius: 8px;
+      background-color: #111317;
+      border: 1px solid var(--border);
+      text-align: left;
+      font-size: 0.95rem;
+      color: #e5e7eb;
+      overflow-x: auto;
+    }
+
+    .result-card {
+      background: #181b22;
+      border: 1px solid #2c2f36;
+      border-radius: 10px;
+      padding: 1rem;
+      margin-top: 0.5rem;
+      opacity: 0;
+      transform: translateY(10px);
+      animation: fadeIn 0.5s forwards ease-out;
+    }
+
+    @keyframes fadeIn {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .result-title {
+      font-weight: 600;
+      font-size: 1rem;
+      margin-bottom: 0.5rem;
+      color: var(--accent);
+    }
+
+    .key-value {
+      display: flex;
+      justify-content: space-between;
+      margin: 0.25rem 0;
+      font-size: 0.9rem;
+    }
+
+    .key {
+      color: #9ca3af;
+      text-transform: capitalize;
+    }
+
+    .value {
+      font-weight: 500;
+      color: var(--text-color);
+    }
+
+    .confidence {
+      color: var(--success);
+      font-weight: 600;
+    }
+
+    .error { color: var(--error); }
+
+    details {
+      margin-top: 0.5rem;
+      background: #121418;
+      border-radius: 6px;
+      padding: 0.5rem;
+    }
+
+    summary {
+      cursor: pointer;
+      color: #9ca3af;
+    }
+
+    @media (max-width: 480px) {
+      .container {
+        padding: 1.5rem;
+      }
+
+      h1 {
+        font-size: 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Synthetic Video Detection</h1>
+
+    <input type="file" id="video-file-input" accept="video/mp4" />
+    <button id="upload-button" disabled>Upload Video</button>
+
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+    <p id="upload-status"></p>
+
+    <h2>Detection Results</h2>
+    <div id="response-container">Awaiting upload...</div>
+  </div>
+
+  <script>
+    const fileInput = document.getElementById('video-file-input');
+    const uploadButton = document.getElementById('upload-button');
+    const statusText = document.getElementById('upload-status');
+    const responseContainer = document.getElementById('response-container');
+    const progressFill = document.getElementById('progress-fill');
+    const uploadUrl = 'http://3.86.4.233:8000/';
+
+    function setStatus(html, color = "#9ca3af") {
+      statusText.innerHTML = html;
+      statusText.style.color = color;
+      statusText.classList.add("active");
+    }
+
+    function renderResultCard(data) {
+      if (typeof data !== "object") {
+        responseContainer.textContent = data;
+        return;
+      }
+
+      let html = `<div class="result-card">
+        <div class="result-title">Analysis Summary</div>`;
+
+      if (data.result)
+        html += `<div class="key-value"><span class="key">Result</span><span class="value">${data.result}</span></div>`;
+      if (data.confidence)
+        html += `<div class="key-value"><span class="key">Confidence</span><span class="confidence">${data.confidence}</span></div>`;
+      if (data.message)
+        html += `<div class="key-value"><span class="key">Message</span><span class="value">${data.message}</span></div>`;
+
+      html += `</div>`;
+
+      const extraKeys = Object.keys(data).filter(
+        k => !["result", "confidence", "message"].includes(k)
+      );
+      if (extraKeys.length) {
+        html += `<details><summary>View Full Response</summary><pre>${JSON.stringify(data, null, 2)}</pre></details>`;
+      }
+
+      responseContainer.innerHTML = html;
+    }
+
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files.length) {
+        const file = fileInput.files[0];
+        uploadButton.disabled = false;
+        setStatus(`${file.name} ready to upload.`, "#9ca3af");
+      } else {
+        uploadButton.disabled = true;
+        statusText.classList.remove("active");
+        statusText.innerHTML = "";
+      }
+      responseContainer.textContent = 'Awaiting upload...';
+      progressFill.style.width = '0%';
+    });
+
+    uploadButton.addEventListener('click', async () => {
+      const file = fileInput.files[0];
+      if (!file) return;
+
+      const formData = new FormData();
+      formData.append('video_file', file);
+
+      setStatus('<div class="spinner"></div> Uploading...', "#9ca3af");
+      uploadButton.disabled = true;
+      progressFill.style.width = '0%';
+
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', uploadUrl);
+
+      xhr.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable) {
+          const percent = (event.loaded / event.total) * 100;
+          progressFill.style.width = `${percent.toFixed(2)}%`;
+        }
+      });
+
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState === XMLHttpRequest.DONE) {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            setStatus('<div class="spinner"></div> Generating results...', "#9ca3af");
+            setTimeout(() => {
+              uploadButton.disabled = false;
+              try {
+                const json = JSON.parse(xhr.responseText);
+                setStatus('✅ Results generated successfully!', "var(--success)");
+                renderResultCard(json);
+              } catch {
+                responseContainer.textContent = xhr.responseText;
+              }
+            }, 700);
+          } else {
+            uploadButton.disabled = false;
+            setStatus('❌ Upload failed.', "var(--error)");
+            responseContainer.textContent = `Error: ${xhr.status} ${xhr.statusText}`;
+          }
+        }
+      };
+
+      xhr.onerror = () => {
+        setStatus('❌ Upload failed due to network error.', "var(--error)");
+        responseContainer.textContent = 'Network error occurred.';
+        uploadButton.disabled = false;
+      };
+
+      xhr.send(formData);
+    });
+  </script>
+</body>
+</html>
