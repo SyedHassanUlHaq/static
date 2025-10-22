@@ -256,31 +256,92 @@
     }
 
     function renderResultCard(data) {
-      if (typeof data !== "object") {
-        responseContainer.textContent = data;
-        return;
+      try {
+        if (!Array.isArray(data)) {
+          responseContainer.textContent = JSON.stringify(data, null, 2);
+          return;
+        }
+    
+        // Calculate overall confidence and majority label
+        const avgConfidence =
+          data.reduce((sum, seg) => sum + (seg.prob_fake ?? 0), 0) / data.length;
+    
+        const fakeCount = data.filter(seg => seg.label?.toLowerCase() === "fake").length;
+        const realCount = data.length - fakeCount;
+    
+        const isFake = fakeCount > realCount;
+        const verdictText = isFake
+          ? "⚠️ Synthetic Video Detected"
+          : "✅ Authentic Video";
+        const verdictColor = isFake ? "var(--error)" : "var(--success)";
+        const confidencePercent = (avgConfidence * 100).toFixed(2);
+    
+        // Build UI
+        let html = `
+          <div class="result-card">
+            <div style="font-size:1.4rem; font-weight:700; color:${verdictColor}; text-align:center; margin-bottom:0.75rem;">
+              ${verdictText}
+            </div>
+            <div class="key-value">
+              <span class="key">Average Confidence</span>
+              <span class="confidence">${confidencePercent}%</span>
+            </div>
+            <div class="key-value">
+              <span class="key">Analyzed Segments</span>
+              <span class="value">${data.length}</span>
+            </div>
+    
+            <div style="margin-top:1rem; border-top:1px solid #2e323b; padding-top:0.75rem;">
+              <div class="result-title" style="font-size:1.05rem;">Segment Breakdown</div>
+              <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+                <thead>
+                  <tr style="color:#9ca3af; text-align:left;">
+                    <th style="padding:6px 4px;">#</th>
+                    <th style="padding:6px 4px;">Start (s)</th>
+                    <th style="padding:6px 4px;">End (s)</th>
+                    <th style="padding:6px 4px;">Label</th>
+                    <th style="padding:6px 4px;">Prob. Fake</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${data
+                    .slice(0, 8)
+                    .map(
+                      (seg, i) => `
+                    <tr style="border-top:1px solid #2e323b;">
+                      <td style="padding:6px 4px;">${seg.segment}</td>
+                      <td style="padding:6px 4px;">${seg.start.toFixed(2)}</td>
+                      <td style="padding:6px 4px;">${seg.end.toFixed(2)}</td>
+                      <td style="padding:6px 4px; color:${
+                        seg.label === "fake"
+                          ? "var(--error)"
+                          : "var(--success)"
+                      };">${seg.label}</td>
+                      <td style="padding:6px 4px;">${(seg.prob_fake * 100).toFixed(
+                        2
+                      )}%</td>
+                    </tr>`
+                    )
+                    .join("")}
+                </tbody>
+              </table>
+              ${
+                data.length > 8
+                  ? `<div style="color:#9ca3af; font-size:0.85rem; margin-top:0.5rem;">(${data.length - 8} more segments hidden)</div>`
+                  : ""
+              }
+            </div>
+          </div>
+          <details style="margin-top:1rem;">
+            <summary>View Technical JSON</summary>
+            <pre>${JSON.stringify(data, null, 2)}</pre>
+          </details>
+        `;
+    
+        responseContainer.innerHTML = html;
+      } catch (e) {
+        responseContainer.textContent = JSON.stringify(data, null, 2);
       }
-
-      let html = `<div class="result-card">
-        <div class="result-title">Analysis Summary</div>`;
-
-      if (data.result)
-        html += `<div class="key-value"><span class="key">Result</span><span class="value">${data.result}</span></div>`;
-      if (data.confidence)
-        html += `<div class="key-value"><span class="key">Confidence</span><span class="confidence">${data.confidence}</span></div>`;
-      if (data.message)
-        html += `<div class="key-value"><span class="key">Message</span><span class="value">${data.message}</span></div>`;
-
-      html += `</div>`;
-
-      const extraKeys = Object.keys(data).filter(
-        k => !["result", "confidence", "message"].includes(k)
-      );
-      if (extraKeys.length) {
-        html += `<details><summary>View Full Response</summary><pre>${JSON.stringify(data, null, 2)}</pre></details>`;
-      }
-
-      responseContainer.innerHTML = html;
     }
 
     fileInput.addEventListener('change', () => {
