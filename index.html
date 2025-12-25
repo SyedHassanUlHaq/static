@@ -256,6 +256,45 @@
     statusText.classList.add("active");
   }
 
+  function renderResultCard(data) {
+    const { prediction, probability, threshold } = data;
+
+    const confidencePercent = (probability * 100).toFixed(2);
+    const isFake = prediction.toLowerCase() === "fake";
+
+    responseContainer.innerHTML = `
+      <div class="result-card">
+        <div class="result-title">Model Prediction</div>
+
+        <div class="key-value">
+          <span class="key">Prediction</span>
+          <span class="value ${isFake ? 'error' : 'confidence'}">
+            ${prediction}
+          </span>
+        </div>
+
+        <div class="key-value">
+          <span class="key">Confidence</span>
+          <span class="value confidence">
+            ${confidencePercent}%
+          </span>
+        </div>
+
+        <div class="key-value">
+          <span class="key">Threshold</span>
+          <span class="value">
+            ${threshold}
+          </span>
+        </div>
+
+        <details>
+          <summary>Raw response</summary>
+          <pre>${JSON.stringify(data, null, 2)}</pre>
+        </details>
+      </div>
+    `;
+  }
+  
   fileInput.addEventListener('change', () => {
     uploadButton.disabled = !fileInput.files.length;
     responseContainer.textContent = 'Awaiting upload...';
