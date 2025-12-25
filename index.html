@@ -241,174 +241,65 @@
     <div id="response-container">Awaiting upload...</div>
   </div>
 
-  <script>
-    const fileInput = document.getElementById('video-file-input');
-    const uploadButton = document.getElementById('upload-button');
-    const statusText = document.getElementById('upload-status');
-    const responseContainer = document.getElementById('response-container');
-    const progressFill = document.getElementById('progress-fill');
-    const uploadUrl = '/api/';
+<script>
+  const fileInput = document.getElementById('video-file-input');
+  const uploadButton = document.getElementById('upload-button');
+  const statusText = document.getElementById('upload-status');
+  const responseContainer = document.getElementById('response-container');
+  const progressFill = document.getElementById('progress-fill');
 
-    function setStatus(html, color = "#9ca3af") {
-      statusText.innerHTML = html;
-      statusText.style.color = color;
-      statusText.classList.add("active");
-    }
+  const uploadUrl = 'http://54.152.7.254:8000/predict';
 
-    function renderResultCard(data) {
-      try {
-        if (!Array.isArray(data)) {
-          responseContainer.textContent = JSON.stringify(data, null, 2);
-          return;
-        }
-    
-        // Calculate overall confidence and majority label
-        const avgConfidence =
-          data.reduce((sum, seg) => sum + (seg.prob_fake ?? 0), 0) / data.length;
-    
-        const fakeCount = data.filter(seg => seg.label?.toLowerCase() === "fake").length;
-        const realCount = data.length - fakeCount;
-    
-        const isFake = fakeCount > realCount;
-        const verdictText = isFake
-          ? "⚠️ Synthetic Video Detected"
-          : "✅ Authentic Video";
-        const verdictColor = isFake ? "var(--error)" : "var(--success)";
-        const confidencePercent = (avgConfidence * 100).toFixed(2);
-    
-        // Build UI
-        let html = `
-          <div class="result-card">
-            <div style="font-size:1.4rem; font-weight:700; color:${verdictColor}; text-align:center; margin-bottom:0.75rem;">
-              ${verdictText}
-            </div>
-            <div class="key-value">
-              <span class="key">Average Confidence</span>
-              <span class="confidence">${confidencePercent}%</span>
-            </div>
-            <div class="key-value">
-              <span class="key">Analyzed Segments</span>
-              <span class="value">${data.length}</span>
-            </div>
-    
-            <div style="margin-top:1rem; border-top:1px solid #2e323b; padding-top:0.75rem;">
-              <div class="result-title" style="font-size:1.05rem;">Segment Breakdown</div>
-              <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
-                <thead>
-                  <tr style="color:#9ca3af; text-align:left;">
-                    <th style="padding:6px 4px;">#</th>
-                    <th style="padding:6px 4px;">Start (s)</th>
-                    <th style="padding:6px 4px;">End (s)</th>
-                    <th style="padding:6px 4px;">Label</th>
-                    <th style="padding:6px 4px;">Prob. Fake</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${data
-                    .slice(0, 8)
-                    .map(
-                      (seg, i) => `
-                    <tr style="border-top:1px solid #2e323b;">
-                      <td style="padding:6px 4px;">${seg.segment}</td>
-                      <td style="padding:6px 4px;">${seg.start.toFixed(2)}</td>
-                      <td style="padding:6px 4px;">${seg.end.toFixed(2)}</td>
-                      <td style="padding:6px 4px; color:${
-                        seg.label === "fake"
-                          ? "var(--error)"
-                          : "var(--success)"
-                      };">${seg.label}</td>
-                      <td style="padding:6px 4px;">${(seg.prob_fake * 100).toFixed(
-                        2
-                      )}%</td>
-                    </tr>`
-                    )
-                    .join("")}
-                </tbody>
-              </table>
-              ${
-                data.length > 8
-                  ? `<div style="color:#9ca3af; font-size:0.85rem; margin-top:0.5rem;">(${data.length - 8} more segments hidden)</div>`
-                  : ""
-              }
-            </div>
-          </div>
-          <details style="margin-top:1rem;">
-            <summary>View Technical JSON</summary>
-            <pre>${JSON.stringify(data, null, 2)}</pre>
-          </details>
-        `;
-    
-        responseContainer.innerHTML = html;
-      } catch (e) {
-        responseContainer.textContent = JSON.stringify(data, null, 2);
+  function setStatus(html, color = "#9ca3af") {
+    statusText.innerHTML = html;
+    statusText.style.color = color;
+    statusText.classList.add("active");
+  }
+
+  fileInput.addEventListener('change', () => {
+    uploadButton.disabled = !fileInput.files.length;
+    responseContainer.textContent = 'Awaiting upload...';
+    progressFill.style.width = '0%';
+  });
+
+  uploadButton.addEventListener('click', () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('video', file); // ✅ correct key
+
+    setStatus('<div class="spinner"></div> Uploading...');
+    uploadButton.disabled = true;
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', uploadUrl);
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) {
+        progressFill.style.width = `${(e.loaded / e.total) * 100}%`;
       }
-    }
+    };
 
-    fileInput.addEventListener('change', () => {
-      if (fileInput.files.length) {
-        const file = fileInput.files[0];
-        uploadButton.disabled = false;
-        setStatus(`${file.name} ready to upload.`, "#9ca3af");
+    xhr.onload = () => {
+      uploadButton.disabled = false;
+      if (xhr.status === 200) {
+        setStatus('✅ Results generated!', 'var(--success)');
+        renderResultCard(JSON.parse(xhr.responseText));
       } else {
-        uploadButton.disabled = true;
-        statusText.classList.remove("active");
-        statusText.innerHTML = "";
+        setStatus('❌ Upload failed', 'var(--error)');
+        responseContainer.textContent = xhr.responseText;
       }
-      responseContainer.textContent = 'Awaiting upload...';
-      progressFill.style.width = '0%';
-    });
+    };
 
-    uploadButton.addEventListener('click', async () => {
-      const file = fileInput.files[0];
-      if (!file) return;
+    xhr.onerror = () => {
+      uploadButton.disabled = false;
+      setStatus('❌ Network error', 'var(--error)');
+    };
 
-      const formData = new FormData();
-      formData.append('video_file', file);
+    xhr.send(formData);
+  });
+</script>
 
-      setStatus('<div class="spinner"></div> Uploading...', "#9ca3af");
-      uploadButton.disabled = true;
-      progressFill.style.width = '0%';
-
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', uploadUrl);
-
-      xhr.upload.addEventListener('progress', (event) => {
-        if (event.lengthComputable) {
-          const percent = (event.loaded / event.total) * 100;
-          progressFill.style.width = `${percent.toFixed(2)}%`;
-        }
-      });
-
-      xhr.onreadystatechange = function () {
-        if (xhr.readyState === XMLHttpRequest.DONE) {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            setStatus('<div class="spinner"></div> Generating results...', "#9ca3af");
-            setTimeout(() => {
-              uploadButton.disabled = false;
-              try {
-                const json = JSON.parse(xhr.responseText);
-                setStatus('✅ Results generated successfully!', "var(--success)");
-                renderResultCard(json);
-              } catch {
-                responseContainer.textContent = xhr.responseText;
-              }
-            }, 700);
-          } else {
-            uploadButton.disabled = false;
-            setStatus('❌ Upload failed.', "var(--error)");
-            responseContainer.textContent = `Error: ${xhr.status} ${xhr.statusText}`;
-          }
-        }
-      };
-
-      xhr.onerror = () => {
-        setStatus('❌ Upload failed due to network error.', "var(--error)");
-        responseContainer.textContent = 'Network error occurred.';
-        uploadButton.disabled = false;
-      };
-
-      xhr.send(formData);
-    });
-  </script>
 </body>
 </html>
