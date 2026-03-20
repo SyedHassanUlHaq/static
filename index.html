@@ -155,19 +155,19 @@
         if (doScene) {
           const fd = new FormData();
           fd.append('video', file);
-          results.scene = await safeFetch('https://3.227.39.78:8000/api/v1/scene/detect-scenes', fd);
+          results.scene = await safeFetch('/api/v1/scene/detect-scenes', fd)
         }
 
         if (doAI) {
           const fd = new FormData();
           fd.append('file', file);
-          results.ai = await safeFetch('https://3.227.39.78:8000/api/v1/video/upload-video', fd);
+          results.ai = await safeFetch('/api/v1/video/upload-video', fd);
         }
 
         if (doLip) {
           const fd = new FormData();
           fd.append('video', file);
-          results.lip = await safeFetch('https://3.227.39.78:8000/inference', fd);
+          results.lip = await safeFetch('/api/v1/inference', fd);
         }
 
         renderResults(results);
