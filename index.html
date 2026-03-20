@@ -40,6 +40,38 @@
       color: #facc15;
       margin-top: 10px;
     }
+    .error {
+      background: #2a0000;
+      color: #ff6b6b;
+      padding: 10px;
+      border-radius: 8px;
+      margin-top: 10px;
+      white-space: pre-wrap;
+      font-size: 12px;
+    }
+    .log {
+      background: #0a0a0a;
+      color: #9ca3af;
+      padding: 10px;
+      border-radius: 8px;
+      margin-top: 10px;
+      font-size: 11px;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    table th, table td {
+      border: 1px solid #333;
+      padding: 6px 8px;
+      text-align: left;
+    }
+    table th {
+      background: #222;
+    }
   </style>
 </head>
 <body>
@@ -58,10 +90,48 @@
     <button onclick="analyze()">Analyze Video</button>
 
     <div id="loading" class="loading"></div>
+    <div id="error" class="error" style="display:none"></div>
+    <div id="logs" class="log"></div>
     <div id="results"></div>
   </div>
 
   <script>
+    function log(msg) {
+      const logs = document.getElementById('logs');
+      logs.innerText += "\n" + msg;
+      console.log(msg);
+    }
+
+    function showError(msg) {
+      const errorDiv = document.getElementById('error');
+      errorDiv.style.display = 'block';
+      errorDiv.innerText = msg;
+    }
+
+    async function safeFetch(url, formData) {
+      log("Calling: " + url);
+
+      const res = await fetch(url, {
+        method: 'POST',
+        body: formData
+      });
+
+      log("Status: " + res.status);
+
+      const text = await res.text();
+      log("Raw response: " + text.substring(0, 500));
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${text}`);
+      }
+
+      try {
+        return JSON.parse(text);
+      } catch (e) {
+        throw new Error("Invalid JSON: " + text);
+      }
+    }
+
     async function analyze() {
       const file = document.getElementById('videoInput').files[0];
       if (!file) return alert('Upload a video');
@@ -73,6 +143,9 @@
       const loading = document.getElementById('loading');
       const resultsDiv = document.getElementById('results');
 
+      document.getElementById('error').style.display = 'none';
+      document.getElementById('logs').innerText = '';
+
       loading.innerText = 'Processing... This may take 2-3 minutes ⏳';
       resultsDiv.innerHTML = '';
 
@@ -82,40 +155,25 @@
         if (doScene) {
           const fd = new FormData();
           fd.append('video', file);
-
-          const res = await fetch('http://44.202.25.6:8000/api/v1/scene/detect-scenes', {
-            method: 'POST',
-            body: fd
-          });
-          results.scene = await res.json();
+          results.scene = await safeFetch('http://3.227.39.78:8000/api/v1/scene/detect-scenes', fd);
         }
 
         if (doAI) {
           const fd = new FormData();
           fd.append('file', file);
-
-          const res = await fetch('http://44.202.25.6:8000/api/v1/video/upload-video', {
-            method: 'POST',
-            body: fd
-          });
-          results.ai = await res.json();
+          results.ai = await safeFetch('http://3.227.39.78:8000/api/v1/video/upload-video', fd);
         }
 
         if (doLip) {
           const fd = new FormData();
           fd.append('video', file);
-
-          const res = await fetch('http://44.202.25.6:8000/inference', {
-            method: 'POST',
-            body: fd
-          });
-          results.lip = await res.json();
+          results.lip = await safeFetch('http://3.227.39.78:8000/inference', fd);
         }
 
         renderResults(results);
       } catch (e) {
-        alert('Error processing video');
         console.error(e);
+        showError(e.message);
       }
 
       loading.innerText = '';
@@ -124,39 +182,64 @@
     function renderResults(data) {
       const container = document.getElementById('results');
 
+      // --- AI Detection ---
       if (data.ai) {
+        const results = data.ai.results || [];
+        const overallPrediction = results.every(r => r.result.prediction === 'Fake') ? 'Fake' : 'Mixed';
+        const avgProb = (results.reduce((a,b) => a + b.result.probability, 0) / results.length) || 0;
+
+        let chunkDetails = results.map(r => 
+          `<tr>
+            <td>${r.chunk}</td>
+            <td style="color:${r.result.prediction === 'Fake' ? '#ff4d4d':'#4dff88'}">
+              ${r.result.prediction}
+            </td>
+            <td>${(r.result.probability*100).toFixed(1)}%</td>
+          </tr>`
+        ).join('');
+
         container.innerHTML += `
           <div class="card">
-            <h3>AI Detection</h3>
-            <p><b>${data.ai.overall.prediction}</b></p>
-            <p>Confidence: ${(data.ai.overall.probability * 100).toFixed(1)}%</p>
+            <h3>AI Generated Detection</h3>
+            <p><b>Overall Prediction:</b> <span style="color:${overallPrediction==='Fake'?'#ff4d4d':'#4dff88'}">${overallPrediction}</span></p>
+            <p><b>Average Confidence:</b> ${(avgProb*100).toFixed(1)}%</p>
+            <details>
+              <summary>See per-chunk results</summary>
+              <table>
+                <thead>
+                  <tr><th>Chunk</th><th>Prediction</th><th>Confidence</th></tr>
+                </thead>
+                <tbody>${chunkDetails}</tbody>
+              </table>
+            </details>
           </div>
         `;
       }
 
+      // --- Scene Detection ---
       if (data.scene) {
-        const scenes = data.scene.scenes.map(s => 
-          `Scene ${s.scene_number} at ${s.timestamp} (${s.confidence})`
-        ).join('<br>');
-
+        const scenes = data.scene.scenes || [];
         container.innerHTML += `
           <div class="card">
             <h3>Scene Cuts</h3>
-            <p>Total Scenes: ${data.scene.total_scenes_detected}</p>
-            <p>${scenes}</p>
+            <p>Total Scenes Detected: ${data.scene.total_scenes_detected}</p>
+            ${scenes.length > 0 
+              ? `<ul>${scenes.map(s => `<li>Scene ${s.scene_number} at ${s.timestamp} (Confidence: ${s.confidence})</li>`).join('')}</ul>` 
+              : `<p>No scene changes detected. The video appears continuous.</p>`}
           </div>
         `;
       }
 
+      // --- Lip Sync ---
       if (data.lip) {
-        const s = data.lip.summary;
+        const s = data.lip.summary || {};
         container.innerHTML += `
           <div class="card">
-            <h3>Lip Sync</h3>
-            <p>Quality: <b>${s.lipsync_quality}</b></p>
-            <p>Accuracy: ${s.sync_accuracy_percent}%</p>
-            <p>Faces: ${s.faces_detected}</p>
-            <p>Issues: ${s.total_problem_segments}</p>
+            <h3>Lip Sync Analysis</h3>
+            <p><b>Overall Quality:</b> ${s.lipsync_quality || 'Unknown'}</p>
+            <p><b>Accuracy:</b> ${s.sync_accuracy_percent || 0}%</p>
+            <p><b>Faces Detected:</b> ${s.faces_detected || 0}</p>
+            <p><b>Problem Segments:</b> ${s.total_problem_segments || 0}</p>
           </div>
         `;
       }
