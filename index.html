@@ -3,342 +3,164 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Synthetic Video Detection</title>
+  <title>AI Video Analyzer</title>
   <style>
-    :root {
-      --bg-color: #0f1115;
-      --card-bg: #1a1d23;
-      --text-color: #e5e7eb;
-      --accent: #3b82f6;
-      --accent-hover: #2563eb;
-      --error: #ef4444;
-      --border: #2e323b;
-      --success: #10b981;
-    }
-
     body {
-      font-family: 'Inter', system-ui, sans-serif;
-      background-color: var(--bg-color);
-      color: var(--text-color);
-      margin: 0;
+      background: #000;
+      color: #fff;
+      font-family: Arial, sans-serif;
       display: flex;
       justify-content: center;
       align-items: center;
       min-height: 100vh;
+      margin: 0;
     }
-
     .container {
-      background-color: var(--card-bg);
-      border: 1px solid var(--border);
+      background: #111;
+      padding: 20px;
       border-radius: 12px;
-      padding: 2rem;
-      max-width: 520px;
       width: 90%;
-      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
-      text-align: center;
+      max-width: 600px;
     }
-
-    h1 {
-      font-size: 1.8rem;
-      margin-bottom: 1rem;
-      font-weight: 600;
-      color: var(--accent);
-    }
-
-    input[type="file"] {
-      display: block;
-      width: 100%;
-      padding: 0.75rem;
-      background: #111317;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: #9ca3af;
-      cursor: pointer;
-      margin-bottom: 1rem;
-    }
-
-    input[type="file"]::-webkit-file-upload-button {
-      background: var(--accent);
-      color: white;
-      border: none;
-      padding: 0.5rem 1rem;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: background 0.3s ease;
-    }
-
-    input[type="file"]::-webkit-file-upload-button:hover {
-      background: var(--accent-hover);
-    }
-
     button {
-      background-color: var(--accent);
-      color: white;
+      background: #ff3235;
       border: none;
+      padding: 10px 16px;
       border-radius: 8px;
-      padding: 0.75rem 1.5rem;
-      font-size: 1rem;
-      font-weight: 500;
+      color: white;
       cursor: pointer;
-      transition: background 0.3s ease;
-      width: 100%;
     }
-
-    button:hover:not(:disabled) {
-      background-color: var(--accent-hover);
-    }
-
-    button:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-
-    #upload-status {
-      margin-top: 1rem;
-      font-size: 0.95rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.6rem;
-      min-height: 28px;
-      transition: all 0.3s ease;
-      opacity: 0;
-    }
-
-    #upload-status.active {
-      opacity: 1;
-    }
-
-    .spinner {
-      width: 16px;
-      height: 16px;
-      border: 2px solid #2e323b;
-      border-top: 2px solid var(--accent);
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    .progress-bar {
-      width: 100%;
-      height: 8px;
-      background-color: #22262c;
-      border-radius: 5px;
-      margin-top: 1rem;
-      overflow: hidden;
-    }
-
-    .progress-fill {
-      height: 100%;
-      background-color: var(--accent);
-      width: 0%;
-      transition: width 0.3s ease;
-    }
-
-    h2 {
-      font-size: 1.2rem;
-      margin-top: 2rem;
-      color: #9ca3af;
-      font-weight: 500;
-    }
-
-    #response-container {
-      margin-top: 1rem;
-      padding: 1rem;
-      border-radius: 8px;
-      background-color: #111317;
-      border: 1px solid var(--border);
-      text-align: left;
-      font-size: 0.95rem;
-      color: #e5e7eb;
-      overflow-x: auto;
-    }
-
-    .result-card {
-      background: #181b22;
-      border: 1px solid #2c2f36;
+    .card {
+      background: #1a1a1a;
+      padding: 15px;
       border-radius: 10px;
-      padding: 1rem;
-      margin-top: 0.5rem;
-      opacity: 0;
-      transform: translateY(10px);
-      animation: fadeIn 0.5s forwards ease-out;
+      margin-top: 15px;
     }
-
-    @keyframes fadeIn {
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    .result-title {
-      font-weight: 600;
-      font-size: 1rem;
-      margin-bottom: 0.5rem;
-      color: var(--accent);
-    }
-
-    .key-value {
-      display: flex;
-      justify-content: space-between;
-      margin: 0.25rem 0;
-      font-size: 0.9rem;
-    }
-
-    .key {
-      color: #9ca3af;
-      text-transform: capitalize;
-    }
-
-    .value {
-      font-weight: 500;
-      color: var(--text-color);
-    }
-
-    .confidence {
-      color: var(--success);
-      font-weight: 600;
-    }
-
-    .error { color: var(--error); }
-
-    details {
-      margin-top: 0.5rem;
-      background: #121418;
-      border-radius: 6px;
-      padding: 0.5rem;
-    }
-
-    summary {
-      cursor: pointer;
-      color: #9ca3af;
-    }
-
-    @media (max-width: 480px) {
-      .container {
-        padding: 1.5rem;
-      }
-
-      h1 {
-        font-size: 1.5rem;
-      }
+    .loading {
+      color: #facc15;
+      margin-top: 10px;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Synthetic Video Detection</h1>
+    <h2>AI Video Analyzer</h2>
 
-    <input type="file" id="video-file-input" accept="video/mp4" />
-    <button id="upload-button" disabled>Upload Video</button>
+    <input type="file" id="videoInput" accept="video/*" />
 
-    <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
-    <p id="upload-status"></p>
+    <div>
+      <label><input type="checkbox" id="ai" /> Detect AI Generated</label><br />
+      <label><input type="checkbox" id="scene" /> Detect Scene Cuts</label><br />
+      <label><input type="checkbox" id="lipsync" /> Check Lip Sync</label>
+    </div>
 
-    <h2>Detection Results</h2>
-    <div id="response-container">Awaiting upload...</div>
+    <br />
+    <button onclick="analyze()">Analyze Video</button>
+
+    <div id="loading" class="loading"></div>
+    <div id="results"></div>
   </div>
 
-<script>
-  const fileInput = document.getElementById('video-file-input');
-  const uploadButton = document.getElementById('upload-button');
-  const statusText = document.getElementById('upload-status');
-  const responseContainer = document.getElementById('response-container');
-  const progressFill = document.getElementById('progress-fill');
+  <script>
+    async function analyze() {
+      const file = document.getElementById('videoInput').files[0];
+      if (!file) return alert('Upload a video');
 
-  const uploadUrl = 'https://3.86.65.59:8000/predict';
+      const doAI = document.getElementById('ai').checked;
+      const doScene = document.getElementById('scene').checked;
+      const doLip = document.getElementById('lipsync').checked;
 
-  function setStatus(html, color = "#9ca3af") {
-    statusText.innerHTML = html;
-    statusText.style.color = color;
-    statusText.classList.add("active");
-  }
+      const loading = document.getElementById('loading');
+      const resultsDiv = document.getElementById('results');
 
-  function renderResultCard(data) {
-    const { prediction, probability, threshold } = data;
+      loading.innerText = 'Processing... This may take 2-3 minutes ⏳';
+      resultsDiv.innerHTML = '';
 
-    const confidencePercent = (probability * 100).toFixed(2);
-    const isFake = prediction.toLowerCase() === "fake";
+      try {
+        const results = {};
 
-    responseContainer.innerHTML = `
-      <div class="result-card">
-        <div class="result-title">Model Prediction</div>
+        if (doScene) {
+          const fd = new FormData();
+          fd.append('video', file);
 
-        <div class="key-value">
-          <span class="key">Prediction</span>
-          <span class="value ${isFake ? 'error' : 'confidence'}">
-            ${prediction}
-          </span>
-        </div>
+          const res = await fetch('http://44.202.25.6:8000/api/v1/scene/detect-scenes', {
+            method: 'POST',
+            body: fd
+          });
+          results.scene = await res.json();
+        }
 
-        <div class="key-value">
-          <span class="key">Confidence</span>
-          <span class="value confidence">
-            ${confidencePercent}%
-          </span>
-        </div>
+        if (doAI) {
+          const fd = new FormData();
+          fd.append('file', file);
 
-        <div class="key-value">
-          <span class="key">Threshold</span>
-          <span class="value">
-            ${threshold}
-          </span>
-        </div>
+          const res = await fetch('http://44.202.25.6:8000/api/v1/video/upload-video', {
+            method: 'POST',
+            body: fd
+          });
+          results.ai = await res.json();
+        }
 
-        <details>
-          <summary>Raw response</summary>
-          <pre>${JSON.stringify(data, null, 2)}</pre>
-        </details>
-      </div>
-    `;
-  }
+        if (doLip) {
+          const fd = new FormData();
+          fd.append('video', file);
 
-  fileInput.addEventListener('change', () => {
-    uploadButton.disabled = !fileInput.files.length;
-    responseContainer.textContent = 'Awaiting upload...';
-    progressFill.style.width = '0%';
-  });
+          const res = await fetch('http://44.202.25.6:8000/inference', {
+            method: 'POST',
+            body: fd
+          });
+          results.lip = await res.json();
+        }
 
-  uploadButton.addEventListener('click', () => {
-    const file = fileInput.files[0];
-    if (!file) return;
-
-    const formData = new FormData();
-    formData.append('video', file); // ✅ correct key
-
-    setStatus('<div class="spinner"></div> Uploading...');
-    uploadButton.disabled = true;
-
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', uploadUrl);
-
-    xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) {
-        progressFill.style.width = `${(e.loaded / e.total) * 100}%`;
+        renderResults(results);
+      } catch (e) {
+        alert('Error processing video');
+        console.error(e);
       }
-    };
 
-    xhr.onload = () => {
-      uploadButton.disabled = false;
-      if (xhr.status === 200) {
-        setStatus('✅ Results generated!', 'var(--success)');
-        renderResultCard(JSON.parse(xhr.responseText));
-      } else {
-        setStatus('❌ Upload failed', 'var(--error)');
-        responseContainer.textContent = xhr.responseText;
+      loading.innerText = '';
+    }
+
+    function renderResults(data) {
+      const container = document.getElementById('results');
+
+      if (data.ai) {
+        container.innerHTML += `
+          <div class="card">
+            <h3>AI Detection</h3>
+            <p><b>${data.ai.overall.prediction}</b></p>
+            <p>Confidence: ${(data.ai.overall.probability * 100).toFixed(1)}%</p>
+          </div>
+        `;
       }
-    };
 
-    xhr.onerror = () => {
-      uploadButton.disabled = false;
-      setStatus('❌ Network error', 'var(--error)');
-    };
+      if (data.scene) {
+        const scenes = data.scene.scenes.map(s => 
+          `Scene ${s.scene_number} at ${s.timestamp} (${s.confidence})`
+        ).join('<br>');
 
-    xhr.send(formData);
-  });
-</script>
+        container.innerHTML += `
+          <div class="card">
+            <h3>Scene Cuts</h3>
+            <p>Total Scenes: ${data.scene.total_scenes_detected}</p>
+            <p>${scenes}</p>
+          </div>
+        `;
+      }
 
+      if (data.lip) {
+        const s = data.lip.summary;
+        container.innerHTML += `
+          <div class="card">
+            <h3>Lip Sync</h3>
+            <p>Quality: <b>${s.lipsync_quality}</b></p>
+            <p>Accuracy: ${s.sync_accuracy_percent}%</p>
+            <p>Faces: ${s.faces_detected}</p>
+            <p>Issues: ${s.total_problem_segments}</p>
+          </div>
+        `;
+      }
+    }
+  </script>
 </body>
 </html>
