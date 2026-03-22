@@ -167,7 +167,7 @@
         if (doLip) {
           const fd = new FormData();
           fd.append('video', file);
-          results.lip = await safeFetch('https://tempdomain.store/inference', fd);
+          results.lip = await safeFetch('https://tempdomain.store/lipsync/inference', fd);
         }
 
         renderResults(results);
