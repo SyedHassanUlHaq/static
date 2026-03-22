@@ -236,10 +236,8 @@
         container.innerHTML += `
           <div class="card">
             <h3>Lip Sync Analysis</h3>
-            <p><b>Overall Quality:</b> ${s.lipsync_quality || 'Unknown'}</p>
             <p><b>Accuracy:</b> ${s.sync_accuracy_percent || 0}%</p>
             <p><b>Faces Detected:</b> ${s.faces_detected || 0}</p>
-            <p><b>Problem Segments:</b> ${s.total_problem_segments || 0}</p>
           </div>
         `;
       }
