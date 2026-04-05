@@ -184,18 +184,9 @@
 
       // --- AI Detection ---
       if (data.ai) {
-        const fakeResults = results.filter(r => r.result.prediction === 'Fake');
-        const realResults = results.filter(r => r.result.prediction === 'Real');
-
-        const avgFake =
-          fakeResults.reduce((sum, r) => sum + r.result.probability, 0) /
-          (fakeResults.length || 1);
-
-        const avgReal =
-          realResults.reduce((sum, r) => sum + r.result.probability, 0) /
-          (realResults.length || 1);
-
-        const overallPrediction = avgFake >= avgReal ? 'Fake' : 'Real';
+        const results = data.ai.results || [];
+        console.log("AI Detection Results:", results);
+        const overallPrediction = results.every(r => r.result.prediction === 'Fake') ? 'Fake' : 'Mixed';
         const avgProb = (results.reduce((a,b) => a + b.result.probability, 0) / results.length) || 0;
 
         let chunkDetails = results.map(r => 
