@@ -198,7 +198,8 @@
             realCount++;
           }
         });
-
+        const fakeAvg = fakeCount ? fakeScore / fakeCount : 0;
+        const realAvg = realCount ? realScore / realCount : 0;
         const overallPrediction = fakeScore >= realScore ? 'Fake' : 'Real';
 
         let confidence = 0;
@@ -232,8 +233,8 @@
             <p><b>Confidence:</b> ${(confidence * 100).toFixed(1)}%</p>
 
             <p>
-              <b>Fake Score:</b> ${(fakeScore * 100).toFixed(1)}% |
-              <b>Real Score:</b> ${(realScore * 100).toFixed(1)}%
+              <b>Fake Score:</b> ${(fakeAvg * 100).toFixed(1)}% |
+              <b>Real Score:</b> ${(realAvg * 100).toFixed(1)}%
             </p>
 
             <details>
