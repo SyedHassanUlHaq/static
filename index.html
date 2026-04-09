@@ -155,19 +155,19 @@
         if (doScene) {
           const fd = new FormData();
           fd.append('video', file);
-          results.scene = await safeFetch('http://localhost:8000/api/v1/scene/detect-scenes', fd);
+          results.scene = await safeFetch('https://tempdomain.store/api/v1/scene/detect-scenes', fd);
         }
 
         if (doAI) {
           const fd = new FormData();
           fd.append('file', file);
-          results.ai = await safeFetch('http://localhost:8000/api/v1/video/upload-video', fd);
+          results.ai = await safeFetch('https://tempdomain.store/api/v1/video/upload-video', fd);
         }
 
         if (doLip) {
           const fd = new FormData();
           fd.append('video', file);
-          results.lip = await safeFetch('http://localhost:8000/lipsync/inference', fd);
+          results.lip = await safeFetch('https://tempdomain.store/lipsync/inference', fd);
         }
 
         renderResults(results);
@@ -184,10 +184,26 @@
 
       // --- AI Detection ---
       if (data.ai) {
-        const results = data.ai.results || [];
-        console.log("AI Detection Results:", results);
-        const overallPrediction = results.every(r => r.result.prediction === 'Fake') ? 'Fake' : 'Mixed';
-        const avgProb = (results.reduce((a,b) => a + b.result.probability, 0) / results.length) || 0;
+        const results = data.ai.results;
+
+        let fakeScore = 0;
+        let realScore = 0;
+
+        results.forEach(r => {
+          if (r.result.prediction === 'Fake') {
+            fakeScore += r.result.probability;
+          } else {
+            realScore += r.result.probability;
+          }
+        });
+
+        const overallPrediction = fakeScore >= realScore ? 'Fake' : 'Real';
+
+        // Normalize confidence (optional but better UX)
+        const total = fakeScore + realScore;
+        const confidence = total > 0
+          ? (overallPrediction === 'Fake' ? fakeScore / total : realScore / total)
+          : 0;
 
         let chunkDetails = results.map(r => 
           `<tr>
@@ -202,8 +218,20 @@
         container.innerHTML += `
           <div class="card">
             <h3>AI Generated Detection</h3>
-            <p><b>Overall Prediction:</b> <span style="color:${overallPrediction==='Fake'?'#ff4d4d':'#4dff88'}">${overallPrediction}</span></p>
-            <p><b>Average Confidence:</b> ${(avgProb*100).toFixed(1)}%</p>
+
+            <p><b>Overall Prediction:</b> 
+              <span style="color:${overallPrediction==='Fake'?'#ff4d4d':'#4dff88'}">
+                ${overallPrediction}
+              </span>
+            </p>
+
+            <p><b>Confidence:</b> ${(confidence * 100).toFixed(1)}%</p>
+
+            <p>
+              <b>Fake Score:</b> ${(fakeScore * 100).toFixed(1)}% |
+              <b>Real Score:</b> ${(realScore * 100).toFixed(1)}%
+            </p>
+
             <details>
               <summary>See per-chunk results</summary>
               <table>
