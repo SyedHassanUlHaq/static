@@ -186,24 +186,28 @@
       if (data.ai) {
         const results = data.ai.results;
 
-        let fakeScore = 0;
-        let realScore = 0;
+        let fakeScore = 0, realScore = 0;
+        let fakeCount = 0, realCount = 0;
 
         results.forEach(r => {
           if (r.result.prediction === 'Fake') {
             fakeScore += r.result.probability;
+            fakeCount++;
           } else {
             realScore += r.result.probability;
+            realCount++;
           }
         });
 
         const overallPrediction = fakeScore >= realScore ? 'Fake' : 'Real';
 
-        // Normalize confidence (optional but better UX)
-        const total = fakeScore + realScore;
-        const confidence = total > 0
-          ? (overallPrediction === 'Fake' ? fakeScore / total : realScore / total)
-          : 0;
+        let confidence = 0;
+
+        if (overallPrediction === 'Fake') {
+          confidence = fakeCount ? fakeScore / fakeCount : 0;
+        } else {
+          confidence = realCount ? realScore / realCount : 0;
+        }
 
         let chunkDetails = results.map(r => 
           `<tr>
