@@ -3,3 +3,9 @@
   to = "https://api.tempdomain.store/:splat"
   status = 200
   force = true
+
+[[redirects]]
+  from = "/lipsync/*"
+  to = "https://lipsync.tempdomain.store/lipsync/:splat"
+  status = 200
+  force = true
